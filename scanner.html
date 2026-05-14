@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>QR Attendance · Scanner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/scanner.css">
+</head>
+<body>
+    <div class="scanner-container">
+        <a href="index.html" class="back-btn">
+            <svg width="18" height="18" fill="none" stroke="currentColor"><path d="M19 12H5m7-7l-7 7 7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Dashboard
+        </a>
+        <div class="viewfinder-wrapper" id="viewfinderWrapper">
+            <video id="cameraFeed" autoplay playsinline muted></video>
+            <canvas id="qrCanvas" style="display:none;"></canvas>
+            <div class="corner-brackets">
+                <div class="corner-bracket top-left"></div><div class="corner-bracket top-right"></div>
+                <div class="corner-bracket bottom-left"></div><div class="corner-bracket bottom-right"></div>
+            </div>
+            <div class="scan-line-container"><div class="scan-line" id="scanLine"></div></div>
+        </div>
+        <div class="scanner-status">
+            <div class="status-dot" id="statusDot"></div>
+            <span class="status-text" id="statusText">Camera Active</span>
+        </div>
+        <div class="toast-overlay" id="toastOverlay">
+            <div class="toast-card"><span class="name" id="toastMessage"></span></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script>
+        // Scanner logic (identical to previous) – uses /api/attendance POST
+        (() => {
+            let scanning = true, stream, scanInterval;
+            const recentlyScanned = new Map();
+            const $ = s => document.querySelector(s);
+
+            async function startCamera() {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width:{ideal:1080}, height:{ideal:1080} }, audio: false });
+                $('#cameraFeed').srcObject = stream;
+                scanInterval = setInterval(processFrame, 200);
+                $('#statusDot').classList.remove('success');
+                $('#statusText').textContent = 'Camera Active';
+            }
+
+            function stopCamera() {
+                if(scanInterval) clearInterval(scanInterval);
+                if(stream) stream.getTracks().forEach(t=>t.stop());
+            }
+
+            function processFrame() {
+                if(!scanning) return;
+                const video = $('#cameraFeed');
+                if(video.readyState < video.HAVE_ENOUGH_DATA) return;
+                const canvas = $('#qrCanvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                try {
+                    const code = jsQR(ctx.getImageData(0,0,canvas.width,canvas.height).data, canvas.width, canvas.height);
+                    if(code && code.data && code.data.length >= 25 && /^[a-zA-Z0-9]{25,35}$/.test(code.data)) {
+                        handleScan(code.data);
+                    }
+                } catch(e){}
+            }
+
+            async function handleScan(secretCode) {
+                if(recentlyScanned.has(secretCode) && Date.now() - recentlyScanned.get(secretCode) < 20000) return;
+                recentlyScanned.set(secretCode, Date.now());
+                scanning = false;
+                clearInterval(scanInterval);
+                $('#scanLine').classList.add('paused');
+                try {
+                    const res = await fetch('/api/attendance', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({secretCode, timestamp: new Date().toISOString()}) });
+                    const data = await res.json();
+                    if(!res.ok) throw new Error(data.message || 'Invalid');
+                    showToast(data.studentName || 'Marked');
+                    $('#statusDot').classList.add('success');
+                    $('#statusText').textContent = 'Attendance Recorded';
+                    playBeep(1000, 80);
+                } catch(e) {
+                    showToast(e.message);
+                    playBeep(400, 120);
+                }
+                setTimeout(() => {
+                    $('#scanLine').classList.remove('paused');
+                    scanning = true;
+                    scanInterval = setInterval(processFrame, 200);
+                    $('#statusDot').classList.remove('success');
+                    $('#statusText').textContent = 'Camera Active';
+                }, 3000);
+            }
+
+            function showToast(msg) {
+                const overlay = $('#toastOverlay');
+                $('#toastMessage').textContent = msg;
+                overlay.classList.add('show');
+                setTimeout(() => overlay.classList.remove('show'), 2000);
+            }
+
+            function playBeep(freq, dur) {
+                try {
+                    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    gain.gain.value = 0.3;
+                    osc.frequency.value = freq;
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.start(); osc.stop(ctx.currentTime + dur/1000);
+                } catch(e){}
+            }
+
+            startCamera();
+            window.addEventListener('beforeunload', stopCamera);
+        })();
+    </script>
+</body>
+</html>

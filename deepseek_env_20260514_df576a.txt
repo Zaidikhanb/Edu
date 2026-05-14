@@ -1,0 +1,4 @@
+GITHUB_API_TOKEN=ghp_xxxxxxxxxxxx
+GITHUB_USERNAME=your-username
+GITHUB_REPO_NAME=edudash-data
+GITHUB_BRANCH=main

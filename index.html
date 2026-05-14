@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>EduDash · Student Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M12 14l9-5-9-5-9 5 9 5z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 14l9-5-9-5-9 5 9 5z" fill="rgba(255,255,255,0.2)"/>
+                        <path d="M12 14v7M3 9v7l9 5 9-5V9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="sidebar-title">EduDash</div>
+                    <div class="sidebar-subtitle">Management</div>
+                </div>
+            </div>
+            <nav class="sidebar-nav" id="sidebarNav">
+                <div class="nav-label">Classes & Sections</div>
+                <!-- built dynamically -->
+            </nav>
+            <div class="sidebar-footer">© 2026 EduDash · v2.0</div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <button class="hamburger" id="hamburger" aria-label="Menu">
+                    <svg width="24" height="24" fill="none" stroke="currentColor"><path d="M4 6h16M4 12h16M4 18h16" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+                <h1 class="page-title">Dashboard Overview</h1>
+                <a href="scanner.html" class="toggle-view-btn">
+                    <svg width="18" height="18" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke-width="2"/></svg>
+                    QR Scanner
+                </a>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-row" id="statsRow"></div>
+
+            <!-- Actions -->
+            <div class="action-bar">
+                <button class="btn btn-primary" id="btnAddStudent">＋ Add Student</button>
+                <button class="btn btn-glass" id="btnRefresh">↻ Refresh</button>
+                <button class="btn btn-glass" id="btnDownload">⤓ Download CSV</button>
+            </div>
+
+            <!-- Student Table -->
+            <div class="panel" id="studentPanel">
+                <div class="panel-header">
+                    <span class="panel-title">👥 Student Records</span>
+                    <span class="badge badge-purple" id="studentCount">0</span>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Name</th><th>Father</th><th>Class</th><th>Sec</th><th>Roll</th><th>Secret Code</th><th>Action</th></tr></thead>
+                        <tbody id="studentTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Attendance Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">📊 Attendance View</span>
+                    <span class="badge badge-cyan" id="attendancePeriodLabel">Daily</span>
+                </div>
+                <div class="tabs" id="attendanceTabs">
+                    <button class="tab-btn active" data-period="daily">Daily</button>
+                    <button class="tab-btn" data-period="weekly">Weekly</button>
+                    <button class="tab-btn" data-period="monthly">Monthly</button>
+                    <button class="tab-btn" data-period="yearly">Yearly</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Date</th><th>Time</th><th>Name</th><th>Father</th><th>Class</th><th>Sec</th><th>Roll</th><th>Status</th></tr></thead>
+                        <tbody id="attendanceTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div class="modal-overlay" id="addStudentModal">
+        <div class="modal">
+            <h3>✨ Add New Student</h3>
+            <div class="form-group">
+                <input type="text" id="inputName" placeholder="Full Name" class="glass-input">
+            </div>
+            <div class="form-group">
+                <input type="text" id="inputFather" placeholder="Father's Name" class="glass-input">
+            </div>
+            <div class="form-row">
+                <select id="inputClass" class="glass-input"><option value="">Class</option></select>
+                <select id="inputSection" class="glass-input"><option value="">Section</option><option>A</option><option>B</option><option>C</option></select>
+            </div>
+            <div class="form-group">
+                <input type="number" id="inputRoll" placeholder="Roll Number" class="glass-input" min="1">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-glass" id="btnCancelModal">Cancel</button>
+                <button class="btn btn-primary" id="btnSaveStudent">Save Student</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // All dashboard logic – identical to previous working version, using /api/students and /api/attendance
+        // (see previous answer for full JS – integrated here for completeness)
+        (() => {
+            const API = '/api';
+            let students = [], attendance = [];
+            let currentClass = null, currentSection = null, currentPeriod = 'daily';
+
+            const $ = s => document.querySelector(s);
+            const $$ = s => document.querySelectorAll(s);
+
+            async function fetchStudents() {
+                const res = await fetch(`${API}/students`);
+                students = await res.json();
+            }
+            async function addStudent(data) {
+                const res = await fetch(`${API}/students`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+                if(!res.ok) throw new Error(await res.text());
+                return res.json();
+            }
+            async function deleteStudent(id) {
+                await fetch(`${API}/students/${id}`, {method:'DELETE'});
+            }
+            async function fetchAttendance() {
+                let url = `${API}/attendance?period=${currentPeriod}`;
+                if(currentClass) url += `&class=${currentClass}`;
+                if(currentSection) url += `&section=${currentSection}`;
+                const res = await fetch(url);
+                attendance = await res.json();
+            }
+
+            function renderSidebar() {
+                const nav = $('#sidebarNav');
+                nav.innerHTML = '<div class="nav-label">Classes & Sections</div>';
+                const allItem = document.createElement('div');
+                allItem.className='class-group';
+                allItem.innerHTML = '<div class="class-toggle active" data-class="all">🏠 All Classes</div>';
+                allItem.querySelector('.class-toggle').addEventListener('click', ()=>{
+                    currentClass=null; currentSection=null;
+                    updateView();
+                });
+                nav.appendChild(allItem);
+                for(let cls=1; cls<=10; cls++) {
+                    const group = document.createElement('div');
+                    group.className='class-group';
+                    group.innerHTML = `
+                        <div class="class-toggle" data-class="${cls}">📘 Class ${cls} <span class="arrow">▶</span></div>
+                        <div class="section-list">
+                            <div class="section-item" data-class="${cls}" data-section="A"><span class="section-dot"></span> Section A</div>
+                            <div class="section-item" data-class="${cls}" data-section="B"><span class="section-dot"></span> Section B</div>
+                            <div class="section-item" data-class="${cls}" data-section="C"><span class="section-dot"></span> Section C</div>
+                        </div>`;
+                    nav.appendChild(group);
+                    const toggle = group.querySelector('.class-toggle');
+                    toggle.addEventListener('click', ()=>{
+                        const list = group.querySelector('.section-list');
+                        const isOpen = list.classList.contains('open');
+                        document.querySelectorAll('.section-list').forEach(l=>l.classList.remove('open'));
+                        document.querySelectorAll('.class-toggle').forEach(t=>t.classList.remove('active'));
+                        document.querySelectorAll('.section-item').forEach(s=>s.classList.remove('active-section'));
+                        if(!isOpen) {
+                            list.classList.add('open');
+                            toggle.classList.add('active');
+                            currentClass = cls;
+                            currentSection = null;
+                        } else {
+                            currentClass = null;
+                        }
+                        updateView();
+                    });
+                    group.querySelectorAll('.section-item').forEach(item=>{
+                        item.addEventListener('click', (e)=>{
+                            e.stopPropagation();
+                            document.querySelectorAll('.section-item').forEach(s=>s.classList.remove('active-section'));
+                            item.classList.add('active-section');
+                            toggle.classList.add('active');
+                            group.querySelector('.section-list').classList.add('open');
+                            currentClass = cls;
+                            currentSection = item.dataset.section;
+                            updateView();
+                        });
+                    });
+                }
+            }
+            async function updateView() {
+                await fetchStudents();
+                await fetchAttendance();
+                renderSidebar();
+                renderStudents();
+                renderAttendance();
+                updateStats();
+            }
+            function renderStudents() {
+                const tbody = $('#studentTableBody');
+                let filtered = students;
+                if(currentClass) filtered = filtered.filter(s=>s.class == currentClass);
+                if(currentSection) filtered = filtered.filter(s=>s.section === currentSection);
+                $('#studentCount').textContent = filtered.length;
+                tbody.innerHTML = filtered.length ? filtered.map(s=>`
+                    <tr>
+                        <td><strong>${s.name}</strong></td>
+                        <td>${s.fatherName}</td>
+                        <td>${s.class}</td>
+                        <td>${s.section}</td>
+                        <td>${s.rollNumber}</td>
+                        <td><span class="secret-code" onclick="navigator.clipboard.writeText('${s.secretCode}')">${s.secretCode}</span></td>
+                        <td><button class="btn-icon" onclick="window.deleteStudentById(${s.id})" title="Delete">🗑</button></td>
+                    </tr>`).join('') : '<tr><td colspan="7" class="empty-state">No students found ✨</td></tr>';
+            }
+            function renderAttendance() {
+                const tbody = $('#attendanceTableBody');
+                tbody.innerHTML = attendance.length ? attendance.map(a=>{
+                    let statusClass = a.status === 'present' ? 'status-present' : (a.status === 'sunday' ? 'status-sunday' : 'status-absent');
+                    return `<tr>
+                        <td>${a.date}</td><td>${a.time||'—'}</td><td>${a.studentName}</td><td>${a.fatherName}</td>
+                        <td>${a.class}</td><td>${a.section}</td><td>${a.rollNumber}</td>
+                        <td><span class="${statusClass}">${a.status}</span></td>
+                    </tr>`;
+                }).join('') : '<tr><td colspan="8" class="empty-state">No records for this period 🌙</td></tr>';
+            }
+            function updateStats() {
+                const today = new Date().toISOString().split('T')[0];
+                const presentToday = attendance.filter(a=>a.date===today && a.status==='present').length;
+                $('#statsRow').innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-icon"><svg>...student icon...</svg></div>
+                        <div class="stat-value">${students.length}</div>
+                        <div class="stat-label">Total Students</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><svg>...check icon...</svg></div>
+                        <div class="stat-value">${presentToday}</div>
+                        <div class="stat-label">Present Today</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><svg>...class icon...</svg></div>
+                        <div class="stat-value">10</div>
+                        <div class="stat-label">Classes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><svg>...section icon...</svg></div>
+                        <div class="stat-value">30</div>
+                        <div class="stat-label">Sections</div>
+                    </div>`;
+            }
+
+            window.deleteStudentById = async (id) => {
+                if(!confirm('Delete this student?')) return;
+                await deleteStudent(id);
+                updateView();
+            };
+
+            document.getElementById('btnAddStudent').addEventListener('click', ()=> $('#addStudentModal').style.display='flex');
+            document.getElementById('btnCancelModal').addEventListener('click', ()=> $('#addStudentModal').style.display='none');
+            document.getElementById('btnSaveStudent').addEventListener('click', async ()=>{
+                const name = $('#inputName').value.trim();
+                const father = $('#inputFather').value.trim();
+                const cls = parseInt($('#inputClass').value);
+                const section = $('#inputSection').value;
+                const roll = parseInt($('#inputRoll').value);
+                if(!name||!father||!cls||!section||!roll) return alert('Fill all fields');
+                try {
+                    await addStudent({name, fatherName:father, class:cls, section, rollNumber:roll});
+                    $('#addStudentModal').style.display='none';
+                    updateView();
+                } catch(e) { alert(e.message); }
+            });
+            document.getElementById('btnRefresh').addEventListener('click', updateView);
+            document.getElementById('btnDownload').addEventListener('click', ()=>{
+                const csv = [['Date','Time','Name','Father','Class','Section','Roll','Status']];
+                attendance.forEach(a=>csv.push([a.date,a.time,a.studentName,a.fatherName,a.class,a.section,a.rollNumber,a.status]));
+                const blob = new Blob([csv.map(r=>r.join(',')).join('\n')],{type:'text/csv'});
+                const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='attendance.csv'; a.click();
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn=>{
+                btn.addEventListener('click', function(){
+                    currentPeriod = this.dataset.period;
+                    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+                    this.classList.add('active');
+                    $('#attendancePeriodLabel').textContent = this.textContent.trim();
+                    fetchAttendance().then(renderAttendance);
+                });
+            });
+            document.getElementById('hamburger').addEventListener('click', ()=> document.getElementById('sidebar').classList.toggle('open'));
+            // Populate class select
+            for(let i=1;i<=10;i++) $('#inputClass').innerHTML += `<option value="${i}">Class ${i}</option>`;
+            // Init
+            updateView();
+        })();
+    </script>
+</body>
+</html>
