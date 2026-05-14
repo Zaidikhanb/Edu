@@ -1,0 +1,111 @@
+/* =============================================
+   QR Scanner – Ultra Stylish
+   ============================================= */
+:root {
+    --bg: #0a0a0f;
+    --surface-glass: rgba(20, 20, 35, 0.7);
+    --border: rgba(255,255,255,0.1);
+    --accent: #06b6d4;
+    --accent-glow: rgba(6,182,212,0.6);
+    --success: #10b981;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --radius: 28px;
+    --transition: 0.3s ease;
+    --font-ui: 'Inter', sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { font-size: 16px; }
+body {
+    font-family: var(--font-ui);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-image: radial-gradient(circle at 30% 30%, rgba(6,182,212,0.1) 0%, transparent 60%);
+}
+.scanner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+    max-width: 380px;
+    padding: 20px;
+}
+/* Viewfinder */
+.viewfinder-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1/1;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 0 30px var(--accent-glow), 0 20px 40px rgba(0,0,0,0.8);
+    transition: box-shadow 0.5s;
+}
+#cameraFeed { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+/* Corner brackets */
+.corner-brackets { position: absolute; inset: 14px; pointer-events: none; }
+.corner-bracket {
+    position: absolute; width: 30px; height: 30px;
+    border-color: rgba(255,255,255,0.6); border-style: solid;
+    transition: all 0.4s;
+}
+.corner-bracket.top-left { top:0; left:0; border-width: 3px 0 0 3px; border-radius: 12px 0 0 0; }
+.corner-bracket.top-right { top:0; right:0; border-width: 3px 3px 0 0; border-radius: 0 12px 0 0; }
+.corner-bracket.bottom-left { bottom:0; left:0; border-width: 0 0 3px 3px; border-radius: 0 0 0 12px; }
+.corner-bracket.bottom-right { bottom:0; right:0; border-width: 0 3px 3px 0; border-radius: 0 0 12px 0; }
+/* Scan line */
+.scan-line-container { position: absolute; left: 14px; right: 14px; top:14px; bottom:14px; overflow: hidden; border-radius: 14px; pointer-events: none; }
+.scan-line {
+    position: absolute; left:0; right:0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), var(--accent), transparent);
+    border-radius: 2px;
+    animation: scanSweep 2.5s ease-in-out infinite;
+    box-shadow: 0 0 15px var(--accent-glow);
+}
+.scan-line.paused { animation-play-state: paused; background: var(--success); }
+@keyframes scanSweep { 0%{top:-2px;} 100%{top:100%;} }
+
+/* Status */
+.scanner-status { display: flex; align-items: center; gap: 10px; }
+.status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{box-shadow:0 0 5px var(--accent);} 50%{box-shadow:0 0 20px var(--accent),0 0 40px var(--accent);} }
+.status-dot.success { background: var(--success); animation: none; }
+.status-text { font-size: 0.8rem; color: var(--text-dim); letter-spacing: 1px; }
+
+/* Toast */
+.toast-overlay {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-120px);
+    z-index: 1000; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+.toast-overlay.show { transform: translateX(-50%) translateY(0); }
+.toast-card {
+    background: var(--surface-glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    color: #fff;
+}
+.toast-card .name { font-weight: 700; font-size: 1rem; }
+
+/* Back button */
+.back-btn {
+    background: none; border: 1px solid var(--border); border-radius: 20px;
+    padding: 8px 18px; color: var(--text); font-weight: 600;
+    cursor: pointer; transition: all var(--transition);
+    display: flex; align-items: center; gap: 6px;
+}
+.back-btn:hover { border-color: var(--accent); }
